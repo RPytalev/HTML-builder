@@ -14,4 +14,4 @@ fs.rmdir(dest, {recursive: true}, () => {
             });
         });
     });
-})
+});
