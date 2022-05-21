@@ -6,6 +6,7 @@ const fsPromises = fs.promises;
 const src = path.join(__dirname, 'files');
 const dest = path.join(__dirname, 'files-copy');
 
+
 fsPromises.mkdir(dest, { recursive: true }).then(async () => {
     fs.readdir(src, (_, items) => {
         items.forEach(async item => {
