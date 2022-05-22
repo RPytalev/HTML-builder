@@ -6,13 +6,13 @@ const fsPromises = fs.promises;
 const src = __dirname;
 const dest = path.join(__dirname, 'project-dist');
 
-GenerateBundle(src, dest);
+fs.rm(dest, { recursive: true }, async () => await GenerateBundle(src, dest));
 
 async function GenerateBundle(src, dest) {
     await CreateProjectDistDir(dest);
     await CopyAssets(src, dest);
-    await GenerateHtmlFromTemplate(src, dest)
-    // add steps
+    await GenerateHtmlFromTemplate(src, dest);
+    await ConcatenateCss(src, dest);
 }
 
 async function CreateProjectDistDir(dest) {
@@ -32,29 +32,43 @@ async function GenerateHtmlFromTemplate(src, dest) {
     let entries = await fsPromises.readdir(srcComponents);
     let components = {};
 
-    entries.forEach(entry => {
+    for (entry of entries) {
         const entryPath = path.join(srcComponents, entry);
         const entryName = path.parse(entryPath).name;
+        const entryExtension = path.parse(entryPath).ext;
 
-        let readableStream = fs.createReadStream(entryPath, "utf8");
-
-        readableStream.on("data", function(chunk){
-            components[entryName] = components[entryName] + chunk;
-        });
-    });
+        if (entryExtension === '.html') {
+            components[entryName] = await fsPromises.readFile(entryPath, 'utf-8');
+        }
+    }
 
     const srcTemplate = path.join(src, 'template.html');
     const template = await fsPromises.readFile(srcTemplate, 'utf-8');
+    const html = template.replace(/{{(.+?)}}/g, (_,g1) => components[g1]);
 
-    const html = template.replace(/{{(.+?)}}/g, (_,g1) => components[g1] || g1);
     const destIndex = path.join(dest, 'index.html');
-
-    let writeableStream = fs.createWriteStream(destIndex);
-    writeableStream.write(html);
+    await fsPromises.writeFile(destIndex, html);
 }
 
-function ConcatenateCss(src, dest) {
-    // Filipp
+async function ConcatenateCss(src, dest) {
+    srcStyles = path.join(src, 'styles');
+
+    let entries = await fsPromises.readdir(srcStyles);
+    let stylesArray = [];
+     
+    for (entry of entries) {
+        const entryPath = path.join(srcStyles, entry);
+        const entryExtension = path.parse(entryPath).ext;
+
+        if (entryExtension === '.css') {
+            const style = await fsPromises.readFile(entryPath, 'utf-8');
+            stylesArray.push(style);
+        }
+    }
+
+    const styles = stylesArray.join('');
+    const destStyles = path.join(dest, 'style.css');
+    await fsPromises.writeFile(destStyles, styles);
 }
 
 async function copyDir(src, dest) {
@@ -72,4 +86,3 @@ async function copyDir(src, dest) {
         }
     }
 }
-
