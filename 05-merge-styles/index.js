@@ -6,19 +6,23 @@ const fsPromises = fs.promises;
 const src = path.join(__dirname, 'styles');
 const dest = path.join(__dirname, 'project-dist');
 
-let bundle = '';
+ConcatenateCss(src, dest);
 
-let readableStream;
-
-readableStream.on("data", function(chunk){ 
-    bundle = bundle + chunk;
-});
-
-fs.readdir(src, (_, items) => {
-    items.forEach(async item => {
-        readableStream = fs.createReadStream(path.join(src, item), "utf8");
-
-
-        await fsPromises.copyFile(path.join(src, item), path.join(dest, 'bundle.css'));
-    });
-});
+async function ConcatenateCss(src, dest) {
+    let entries = await fsPromises.readdir(src);
+    let stylesArray = [];
+     
+    for (entry of entries) {
+        const entryPath = path.join(src, entry);
+        const entryExtension = path.parse(entryPath).ext;
+    
+        if (entryExtension === '.css') {
+            const style = await fsPromises.readFile(entryPath, 'utf-8');
+            stylesArray.push(style);
+        }
+    }
+    
+    const styles = stylesArray.join('');
+    const destStyles = path.join(dest, 'bundle.css');
+    await fsPromises.writeFile(destStyles, styles);    
+}
